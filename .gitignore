@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+photos/
+*.csv
+.env
+*accessKeys*
