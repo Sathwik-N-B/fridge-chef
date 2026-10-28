@@ -87,18 +87,16 @@ def identify_ingredients(image_path: str) -> str:
                 "content": [
                     {"image": {"format": "jpeg", "source": {"bytes": image_bytes}}},
                     {"text": (
-                        "List the specific food and drink items visible in this photo, "
-                        "including fresh produce, packaged goods, jars, cans, and boxes. "
-                        "Name specific items (e.g. 'apples', 'tomato sauce'), not categories "
-                        "like 'vegetables' or 'dairy'. Comma-separated, each item once, no "
-                        "extra text. Only list items you can clearly see; do not guess or add "
-                        "items that are typically in a fridge, and ignore text on labels. "
-                        "Only if there is truly no food or drink in the photo, "
-                        "reply exactly: NONE"
+                        "List the specific food and drink items you can clearly see in this "
+                        "photo. Only list what is actually visible; do not guess or add items "
+                        "that are merely typical for a fridge. Identify items by how they look, "
+                        "not by brand text on labels. Name specific items, not categories. "
+                        "One comma-separated line, each item once, at most 25 items, no extra "
+                        "text. If there is truly no food or drink, reply exactly: NONE"
                     )},
                 ],
             }],
-            inferenceConfig={"maxTokens": 300, "temperature": 0},
+            inferenceConfig={"maxTokens": 300, "temperature": 0.3},
         )
     except (ClientError, BotoCoreError) as e:
         return f"Error calling Bedrock: {e}"
@@ -113,8 +111,13 @@ def identify_ingredients(image_path: str) -> str:
     if raw.upper().startswith("NONE"):
         return "No food items detected. Ask the user to list them."
 
+    parts = raw.replace("\n", ",").split(",")
+    if stop == "max_tokens":
+        parts = parts[:-1]  # the last item was cut off mid-word, drop it
+        _trace("   reply was cut off; dropped the last partial item")
+
     seen, items = set(), []
-    for part in raw.replace("\n", ",").split(","):
+    for part in parts:
         item = part.strip().strip(".").lower()
         if item and item not in seen:
             seen.add(item)
